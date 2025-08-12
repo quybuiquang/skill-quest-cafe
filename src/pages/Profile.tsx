@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -223,10 +223,13 @@ const Profile = () => {
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
                           <span>
-                            Tham gia {formatDistanceToNow(new Date(profile?.created_at || ''), { 
+                            {/* Tham gia {formatDistanceToNow(new Date(profile?.created_at || ''), { 
                               addSuffix: true, 
                               locale: vi 
-                            })}
+                            })} */}
+                            {profile?.created_at && !isNaN(new Date(profile.created_at).getTime())
+      ? `Tham gia ${formatDistanceToNow(new Date(profile.created_at), { addSuffix: true, locale: vi })}`
+      : 'Ngày tham gia không xác định'}
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
