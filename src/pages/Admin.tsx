@@ -8,9 +8,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { Check, X, Eye, Settings } from 'lucide-react';
+import { Check, X, Eye, Settings, Shield, Users, FileText, AlertTriangle, TrendingUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { Footer } from '@/components/Footer';
 
 const Admin = () => {
   const { user } = useAuth();
@@ -187,15 +188,80 @@ const Admin = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-4">Quản trị hệ thống</h1>
+        <div className="mb-8 space-y-6">
+          <div className="flex items-center gap-3">
+            <Shield className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-3xl font-bold">Quản trị hệ thống</h1>
+              <p className="text-muted-foreground">Quản lý câu hỏi và người dùng</p>
+            </div>
+          </div>
+          
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-8 w-8 text-yellow-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{pendingQuestions.length}</p>
+                    <p className="text-sm text-muted-foreground">Chờ duyệt</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-8 w-8 text-blue-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{allQuestions.length}</p>
+                    <p className="text-sm text-muted-foreground">Tổng câu hỏi</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Users className="h-8 w-8 text-green-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{userProfiles.length}</p>
+                    <p className="text-sm text-muted-foreground">Người dùng</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="h-8 w-8 text-purple-500" />
+                  <div>
+                    <p className="text-2xl font-bold">
+                      {allQuestions.filter(q => q.status === 'approved').length}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Đã duyệt</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         <Tabs defaultValue="pending" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="pending">Câu hỏi chờ duyệt ({pendingQuestions.length})</TabsTrigger>
-            <TabsTrigger value="all-questions">Tất cả câu hỏi ({allQuestions.length})</TabsTrigger>
-            <TabsTrigger value="users">Người dùng ({userProfiles.length})</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="pending" className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Chờ duyệt ({pendingQuestions.length})
+            </TabsTrigger>
+            <TabsTrigger value="all-questions" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Tất cả câu hỏi ({allQuestions.length})
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Người dùng ({userProfiles.length})
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pending">
@@ -208,7 +274,7 @@ const Admin = () => {
                 </Card>
               ) : (
                 pendingQuestions.map((question) => (
-                  <Card key={question.id}>
+                  <Card key={question.id} className="border-l-4 border-l-yellow-500">
                     <CardHeader>
                       <div className="flex justify-between items-start gap-4">
                         <CardTitle className="text-lg">{question.title}</CardTitle>
@@ -252,6 +318,7 @@ const Admin = () => {
                             </Button>
                             <Button
                               size="sm"
+                              className="bg-green-600 hover:bg-green-700"
                               onClick={() => handleApprove(question.id)}
                             >
                               <Check className="h-4 w-4 mr-2" />
@@ -278,7 +345,10 @@ const Admin = () => {
           <TabsContent value="all-questions">
             <div className="space-y-4">
               {allQuestions.map((question) => (
-                <Card key={question.id}>
+                <Card key={question.id} className={`border-l-4 ${
+                  question.status === 'approved' ? 'border-l-green-500' :
+                  question.status === 'rejected' ? 'border-l-red-500' : 'border-l-yellow-500'
+                }`}>
                   <CardHeader>
                     <div className="flex justify-between items-start gap-4">
                       <CardTitle className="text-lg">{question.title}</CardTitle>
@@ -358,7 +428,9 @@ const Admin = () => {
           <TabsContent value="users">
             <div className="space-y-4">
               {userProfiles.map((profile) => (
-                <Card key={profile.id}>
+                <Card key={profile.id} className={`border-l-4 ${
+                  profile.status === 'active' ? 'border-l-green-500' : 'border-l-red-500'
+                }`}>
                   <CardContent className="py-6">
                     <div className="flex justify-between items-center">
                       <div className="space-y-1">
@@ -396,6 +468,7 @@ const Admin = () => {
           </TabsContent>
         </Tabs>
       </div>
+      <Footer />
     </div>
   );
 };

@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
+import { ArrowLeft, Save, X } from 'lucide-react';
+import { Footer } from '@/components/Footer';
 
 const AddQuestion = () => {
   const { categories, createQuestion } = useQuestions();
@@ -96,9 +98,21 @@ const AddQuestion = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto px-4 py-8">
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate('/')}
+          className="mb-6"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Quay lại
+        </Button>
+        
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
-            <CardTitle>Thêm câu hỏi mới</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Save className="h-5 w-5" />
+              Thêm câu hỏi mới
+            </CardTitle>
             <CardDescription>
               Chia sẻ câu hỏi phỏng vấn với cộng đồng. Câu hỏi sẽ được duyệt trước khi hiển thị.
             </CardDescription>
@@ -127,9 +141,13 @@ const AddQuestion = () => {
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Mô tả chi tiết câu hỏi, yêu cầu, ví dụ..."
-                  rows={8}
+                  rows={10}
+                  className="resize-none"
                   required
                 />
+                <p className="text-sm text-muted-foreground">
+                  Hãy mô tả rõ ràng và chi tiết để giúp người khác hiểu câu hỏi tốt hơn
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -179,15 +197,18 @@ const AddQuestion = () => {
               </div>
 
               <div className="flex gap-4">
-                <Button type="submit" disabled={loading} className="flex-1">
+                <Button type="submit" disabled={loading} className="flex-1" size="lg">
+                  <Save className="h-4 w-4 mr-2" />
                   {loading ? 'Đang gửi...' : 'Gửi câu hỏi'}
                 </Button>
                 <Button 
                   type="button" 
-                  variant="outline" 
+                  variant="outline"
+                  size="lg"
                   onClick={() => navigate('/')}
                   disabled={loading}
                 >
+                  <X className="h-4 w-4 mr-2" />
                   Hủy
                 </Button>
               </div>
@@ -195,6 +216,7 @@ const AddQuestion = () => {
           </CardContent>
         </Card>
       </div>
+      <Footer />
     </div>
   );
 };

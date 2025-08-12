@@ -9,8 +9,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuestionDetail } from '@/hooks/useQuestionDetail';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { Heart, MessageCircle, ArrowLeft, Plus } from 'lucide-react';
+import { Heart, MessageCircle, ArrowLeft, Plus, User, Calendar, Tag, Award, Send, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
+import { Footer } from '@/components/Footer';
 
 const QuestionDetail = () => {
   const { id } = useParams();
@@ -166,57 +168,71 @@ const QuestionDetail = () => {
         </Button>
 
         {/* Question */}
-        <Card className="mb-8">
+        <Card className="mb-8 border-l-4 border-l-primary">
           <CardHeader>
             <div className="flex justify-between items-start gap-4">
-              <CardTitle className="text-2xl">{question.title}</CardTitle>
+              <div className="flex-1">
+                <CardTitle className="text-2xl mb-3 leading-tight">{question.title}</CardTitle>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <User className="h-4 w-4" />
+                    <span>{question.profiles.display_name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    <span>
+                      {formatDistanceToNow(new Date(question.created_at), { 
+                        addSuffix: true, 
+                        locale: vi 
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Tag className="h-4 w-4" />
+                    <span>{question.categories.name}</span>
+                  </div>
+                </div>
+              </div>
               <div className="flex gap-2 flex-wrap">
                 <Badge className={difficultyColors[question.difficulty]}>
+                  <Award className="h-3 w-3 mr-1" />
                   {difficultyLabels[question.difficulty]}
                 </Badge>
                 <Badge className={levelColors[question.level]}>
                   {levelLabels[question.level]}
-                </Badge>
-                <Badge variant="outline">
-                  {question.categories.name}
                 </Badge>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="prose max-w-none">
-                <p className="whitespace-pre-wrap">{question.content}</p>
+              <Separator />
+              <div className="prose max-w-none bg-muted/30 p-6 rounded-lg">
+                <p className="whitespace-pre-wrap text-base leading-relaxed m-0">{question.content}</p>
               </div>
               
-              <div className="flex items-center justify-between border-t pt-4">
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span>Bởi: {question.profiles.display_name}</span>
-                  <span>
-                    {formatDistanceToNow(new Date(question.created_at), { 
-                      addSuffix: true, 
-                      locale: vi 
-                    })}
-                  </span>
-                </div>
-                
+              <Separator />
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <Button
-                    variant="ghost"
+                    variant={hasLiked('question', question.id) ? "default" : "outline"}
                     size="sm"
                     onClick={() => handleLike('question', question.id)}
                   >
                     <Heart className={`h-4 w-4 mr-2 ${hasLiked('question', question.id) ? 'fill-red-500 text-red-500' : ''}`} />
-                    Like
+                    {hasLiked('question', question.id) ? 'Đã thích' : 'Thích'}
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => setCommentTarget({ type: 'question', id: question.id })}
                   >
                     <MessageCircle className="h-4 w-4 mr-2" />
                     Bình luận
                   </Button>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {comments.filter(c => c.parent_type === 'question' && c.parent_id === question.id).length} bình luận • {solutions.length} lời giải
                 </div>
               </div>
             </div>
@@ -226,17 +242,23 @@ const QuestionDetail = () => {
         {/* Solutions */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Lời giải ({solutions.length})</h2>
-            <Button onClick={() => setShowSolutionForm(!showSolutionForm)}>
+            <div>
+              <h2 className="text-2xl font-bold mb-1">Lời giải</h2>
+              <p className="text-muted-foreground">{solutions.length} lời giải từ cộng đồng</p>
+            </div>
+            <Button onClick={() => setShowSolutionForm(!showSolutionForm)} size="lg">
               <Plus className="h-4 w-4 mr-2" />
               Thêm lời giải
             </Button>
           </div>
 
           {showSolutionForm && (
-            <Card className="mb-6">
+            <Card className="mb-6 border-dashed border-2">
               <CardHeader>
-                <CardTitle>Thêm lời giải mới</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Edit3 className="h-5 w-5" />
+                  Thêm lời giải mới
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -244,10 +266,14 @@ const QuestionDetail = () => {
                     placeholder="Nhập lời giải của bạn..."
                     value={newSolution}
                     onChange={(e) => setNewSolution(e.target.value)}
-                    rows={8}
+                    rows={10}
+                    className="resize-none"
                   />
                   <div className="flex gap-2">
-                    <Button onClick={handleAddSolution}>Đăng lời giải</Button>
+                    <Button onClick={handleAddSolution} disabled={!newSolution.trim()}>
+                      <Send className="h-4 w-4 mr-2" />
+                      Đăng lời giải
+                    </Button>
                     <Button variant="outline" onClick={() => setShowSolutionForm(false)}>
                       Hủy
                     </Button>
@@ -259,27 +285,31 @@ const QuestionDetail = () => {
 
           <div className="space-y-4">
             {solutions.map((solution) => (
-              <Card key={solution.id}>
+              <Card key={solution.id} className="border-l-4 border-l-green-500/30">
                 <CardContent className="pt-6">
                   <div className="space-y-4">
-                    <div className="prose max-w-none">
-                      <p className="whitespace-pre-wrap">{solution.content}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                      <User className="h-4 w-4" />
+                      <span className="font-medium">{solution.profiles.display_name}</span>
+                      <span>•</span>
+                      <Calendar className="h-4 w-4" />
+                      <span>
+                        {formatDistanceToNow(new Date(solution.created_at), { 
+                          addSuffix: true, 
+                          locale: vi 
+                        })}
+                      </span>
                     </div>
                     
-                    <div className="flex items-center justify-between border-t pt-4">
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>Bởi: {solution.profiles.display_name}</span>
-                        <span>
-                          {formatDistanceToNow(new Date(solution.created_at), { 
-                            addSuffix: true, 
-                            locale: vi 
-                          })}
-                        </span>
-                      </div>
-                      
+                    <div className="prose max-w-none bg-green-50/50 dark:bg-green-950/20 p-4 rounded-lg">
+                      <p className="whitespace-pre-wrap text-base leading-relaxed m-0">{solution.content}</p>
+                    </div>
+                    
+                    <Separator />
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <Button
-                          variant="ghost"
+                          variant={hasLiked('solution', solution.id) ? "default" : "outline"}
                           size="sm"
                           onClick={() => handleLike('solution', solution.id)}
                         >
@@ -287,13 +317,16 @@ const QuestionDetail = () => {
                           {solution.likes_count || 0}
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => setCommentTarget({ type: 'solution', id: solution.id })}
                         >
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Bình luận
                         </Button>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {comments.filter(c => c.parent_type === 'solution' && c.parent_id === solution.id).length} bình luận
                       </div>
                     </div>
 
@@ -356,9 +389,10 @@ const QuestionDetail = () => {
 
         {/* Comment Form */}
         {commentTarget && (
-          <Card>
+          <Card className="border-dashed border-2">
             <CardHeader>
-              <CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
                 Thêm bình luận cho {commentTarget.type === 'question' ? 'câu hỏi' : 'lời giải'}
               </CardTitle>
             </CardHeader>
@@ -368,10 +402,14 @@ const QuestionDetail = () => {
                   placeholder="Nhập bình luận của bạn..."
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  rows={3}
+                  rows={4}
+                  className="resize-none"
                 />
                 <div className="flex gap-2">
-                  <Button onClick={handleAddComment}>Đăng bình luận</Button>
+                  <Button onClick={handleAddComment} disabled={!newComment.trim()}>
+                    <Send className="h-4 w-4 mr-2" />
+                    Đăng bình luận
+                  </Button>
                   <Button variant="outline" onClick={() => setCommentTarget(null)}>
                     Hủy
                   </Button>
@@ -381,6 +419,7 @@ const QuestionDetail = () => {
           </Card>
         )}
       </div>
+      <Footer />
     </div>
   );
 };
