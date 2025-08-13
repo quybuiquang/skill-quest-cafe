@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RichTextEditor } from '@/components/RichTextEditor';
+import { QuickComment } from '@/components/QuickComment';
 import { ExpandableContent } from '@/components/ExpandableContent';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuestionDetail } from '@/hooks/useQuestionDetail';
@@ -335,7 +336,7 @@ const QuestionDetail = () => {
                           .filter(c => c.parent_type === 'solution' && c.parent_id === solution.id)
                           .map((comment) => (
                             <div key={comment.id} className="bg-muted/50 rounded p-3">
-                              <p className="text-sm">{comment.content}</p>
+                              <div dangerouslySetInnerHTML={{ __html: comment.content }} className="text-sm" />
                               <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
                                 <span>{comment.profiles.display_name}</span>
                                 <span>•</span>
@@ -367,7 +368,7 @@ const QuestionDetail = () => {
                 .map((comment) => (
                   <Card key={comment.id}>
                     <CardContent className="pt-4">
-                      <p className="text-sm">{comment.content}</p>
+                      <div dangerouslySetInnerHTML={{ __html: comment.content }} className="text-sm" />
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
                         <span>{comment.profiles.display_name}</span>
                         <span>•</span>
@@ -385,35 +386,23 @@ const QuestionDetail = () => {
           </div>
         )}
 
-        {/* Comment Form */}
+        {/* Quick Comment */}
         {commentTarget && (
-          <Card className="border-dashed border-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5" />
-                Thêm bình luận cho {commentTarget.type === 'question' ? 'câu hỏi' : 'lời giải'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <RichTextEditor
-                  content={newComment}
-                  onChange={setNewComment}
-                  placeholder="Nhập bình luận của bạn... Hỗ trợ định dạng text và code"
-                  className="min-h-[120px]"
-                />
-                <div className="flex gap-2">
-                  <Button onClick={handleAddComment} disabled={!newComment.trim()}>
-                    <Send className="h-4 w-4 mr-2" />
-                    Đăng bình luận
-                  </Button>
-                  <Button variant="outline" onClick={() => setCommentTarget(null)}>
-                    Hủy
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <QuickComment
+            targetType={commentTarget.type}
+            targetId={commentTarget.id}
+            targetTitle={commentTarget.type === 'question' ? question.title : 'lời giải'}
+            onSubmit={async (content) => {
+              await addComment(content, commentTarget.type, commentTarget.id);
+              setCommentTarget(null);
+              toast({
+                title: "Thành công",
+                description: "Đã thêm bình luận!"
+              });
+            }}
+            onCancel={() => setCommentTarget(null)}
+            className="mx-4"
+          />
         )}
       </div>
       <Footer />

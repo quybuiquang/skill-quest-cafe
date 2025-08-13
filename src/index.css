@@ -161,4 +161,15 @@ All colors MUST be HSL.
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+
+  /* Dropdown improvements - ensure solid background and high z-index */
+  [data-radix-popper-content-wrapper] {
+    z-index: 50 !important;
+  }
+  
+  .bg-popover {
+    background-color: hsl(var(--popover)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+  }
 }
