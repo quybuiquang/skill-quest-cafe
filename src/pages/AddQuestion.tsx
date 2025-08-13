@@ -5,12 +5,12 @@ import { useQuestions } from '@/hooks/useQuestions';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/RichTextEditor';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, X } from 'lucide-react';
+import { ArrowLeft, Save, X, FileText } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 
 const AddQuestion = () => {
@@ -110,11 +110,11 @@ const AddQuestion = () => {
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Save className="h-5 w-5" />
+              <FileText className="h-5 w-5" />
               Thêm câu hỏi mới
             </CardTitle>
             <CardDescription>
-              Chia sẻ câu hỏi phỏng vấn với cộng đồng. Câu hỏi sẽ được duyệt trước khi hiển thị.
+              Chia sẻ câu hỏi phỏng vấn với cộng đồng. Sử dụng rich text editor để định dạng đẹp.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -136,17 +136,14 @@ const AddQuestion = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="content">Nội dung câu hỏi *</Label>
-                <Textarea
-                  id="content"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Mô tả chi tiết câu hỏi, yêu cầu, ví dụ..."
-                  rows={10}
-                  className="resize-none"
-                  required
+                <RichTextEditor
+                  content={content}
+                  onChange={setContent}
+                  placeholder="Mô tả chi tiết câu hỏi, yêu cầu, ví dụ... Hỗ trợ định dạng text, code block, danh sách..."
+                  className="min-h-[200px]"
                 />
                 <p className="text-sm text-muted-foreground">
-                  Hãy mô tả rõ ràng và chi tiết để giúp người khác hiểu câu hỏi tốt hơn
+                  Hãy mô tả rõ ràng và chi tiết. Sử dụng code block cho code examples và định dạng phù hợp.
                 </p>
               </div>
 

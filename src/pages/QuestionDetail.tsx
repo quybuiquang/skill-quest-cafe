@@ -4,7 +4,8 @@ import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/RichTextEditor';
+import { ExpandableContent } from '@/components/ExpandableContent';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuestionDetail } from '@/hooks/useQuestionDetail';
 import { formatDistanceToNow } from 'date-fns';
@@ -208,7 +209,7 @@ const QuestionDetail = () => {
             <div className="space-y-4">
               <Separator />
               <div className="prose max-w-none bg-muted/30 p-6 rounded-lg">
-                <p className="whitespace-pre-wrap text-base leading-relaxed m-0">{question.content}</p>
+                <div dangerouslySetInnerHTML={{ __html: question.content }} />
               </div>
               
               <Separator />
@@ -262,12 +263,11 @@ const QuestionDetail = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <Textarea
-                    placeholder="Nhập lời giải của bạn..."
-                    value={newSolution}
-                    onChange={(e) => setNewSolution(e.target.value)}
-                    rows={10}
-                    className="resize-none"
+                  <RichTextEditor
+                    content={newSolution}
+                    onChange={setNewSolution}
+                    placeholder="Nhập lời giải của bạn... Hỗ trợ định dạng text, code block, danh sách..."
+                    className="min-h-[250px]"
                   />
                   <div className="flex gap-2">
                     <Button onClick={handleAddSolution} disabled={!newSolution.trim()}>
@@ -301,9 +301,7 @@ const QuestionDetail = () => {
                       </span>
                     </div>
                     
-                    <div className="prose max-w-none bg-green-50/50 dark:bg-green-950/20 p-4 rounded-lg">
-                      <p className="whitespace-pre-wrap text-base leading-relaxed m-0">{solution.content}</p>
-                    </div>
+                    <ExpandableContent content={solution.content} maxLength={400} />
                     
                     <Separator />
                     <div className="flex items-center justify-between">
@@ -398,12 +396,11 @@ const QuestionDetail = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <Textarea
-                  placeholder="Nhập bình luận của bạn..."
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  rows={4}
-                  className="resize-none"
+                <RichTextEditor
+                  content={newComment}
+                  onChange={setNewComment}
+                  placeholder="Nhập bình luận của bạn... Hỗ trợ định dạng text và code"
+                  className="min-h-[120px]"
                 />
                 <div className="flex gap-2">
                   <Button onClick={handleAddComment} disabled={!newComment.trim()}>

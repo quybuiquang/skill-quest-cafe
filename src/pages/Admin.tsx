@@ -4,14 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CategoryModal } from '@/components/CategoryModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useCategories } from '@/hooks/useCategories';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { Check, X, Eye, Settings, Shield, Users, FileText, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Check, X, Eye, Settings, Shield, Users, FileText, AlertTriangle, TrendingUp, Plus, Edit, Trash2, Tag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Footer } from '@/components/Footer';
+import { Category } from '@/hooks/useQuestions';
 
 const Admin = () => {
   const { user } = useAuth();
@@ -30,6 +33,20 @@ const Admin = () => {
     deleteQuestion,
     toggleUserStatus
   } = useAdmin();
+  
+  const {
+    categories,
+    loading: categoriesLoading,
+    createCategory,
+    updateCategory,
+    deleteCategory
+  } = useCategories();
+
+  const [categoryModal, setCategoryModal] = useState<{
+    isOpen: boolean;
+    category?: Category;
+  }>({ isOpen: false });
+  const [categoryActionLoading, setCategoryActionLoading] = useState(false);
 
   const difficultyColors = {
     easy: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
@@ -135,6 +152,52 @@ const Admin = () => {
         toast({
           title: "Lỗi",
           description: `Không thể ${action} tài khoản. Vui lòng thử lại.`,
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const handleSaveCategory = async (name: string) => {
+    setCategoryActionLoading(true);
+    try {
+      if (categoryModal.category) {
+        await updateCategory(categoryModal.category.id, name);
+        toast({
+          title: "Thành công",
+          description: "Đã cập nhật danh mục!"
+        });
+      } else {
+        await createCategory(name);
+        toast({
+          title: "Thành công",
+          description: "Đã thêm danh mục mới!"
+        });
+      }
+      setCategoryModal({ isOpen: false });
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể lưu danh mục. Vui lòng thử lại.",
+        variant: "destructive"
+      });
+    } finally {
+      setCategoryActionLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (confirm('Bạn có chắc chắn muốn xóa danh mục này? Tất cả câu hỏi trong danh mục sẽ cần được chuyển sang danh mục khác.')) {
+      try {
+        await deleteCategory(categoryId);
+        toast({
+          title: "Thành công",
+          description: "Đã xóa danh mục!"
+        });
+      } catch (error) {
+        toast({
+          title: "Lỗi",
+          description: "Không thể xóa danh mục. Có thể danh mục này đang được sử dụng.",
           variant: "destructive"
         });
       }
@@ -249,7 +312,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="pending" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="pending" className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
               Chờ duyệt ({pendingQuestions.length})
@@ -261,6 +324,10 @@ const Admin = () => {
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Người dùng ({userProfiles.length})
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              Danh mục ({categories.length})
             </TabsTrigger>
           </TabsList>
 
@@ -466,7 +533,71 @@ const Admin = () => {
               ))}
             </div>
           </TabsContent>
+
+          <TabsContent value="categories">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Quản lý danh mục</h3>
+                <Button onClick={() => setCategoryModal({ isOpen: true })}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Thêm danh mục
+                </Button>
+              </div>
+              
+              {categories.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-muted-foreground">Chưa có danh mục nào.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {categories.map((category) => (
+                    <Card key={category.id} className="border-l-4 border-l-primary">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h4 className="font-semibold">{category.name}</h4>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              ID: {category.id.substring(0, 8)}...
+                            </p>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setCategoryModal({ 
+                                isOpen: true, 
+                                category 
+                              })}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteCategory(category.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
         </Tabs>
+
+        <CategoryModal
+          isOpen={categoryModal.isOpen}
+          onClose={() => setCategoryModal({ isOpen: false })}
+          onSave={handleSaveCategory}
+          category={categoryModal.category}
+          loading={categoryActionLoading}
+        />
       </div>
       <Footer />
     </div>

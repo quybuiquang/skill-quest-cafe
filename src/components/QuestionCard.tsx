@@ -37,57 +37,59 @@ const levelLabels = {
 
 export function QuestionCard({ question }: QuestionCardProps) {
   return (
-    <Card className="hover:shadow-md transition-all duration-200 border-l-4 border-l-primary/20 bg-card/50 backdrop-blur-sm">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-          <CardTitle className="text-base sm:text-lg leading-tight">
-            <Link 
-              to={`/questions/${question.id}`}
-              className="hover:text-primary transition-colors line-clamp-2 font-semibold"
-            >
-              {question.title}
-            </Link>
-          </CardTitle>
-          <div className="flex gap-1.5 flex-wrap">
-            <Badge className={`${difficultyColors[question.difficulty]} text-xs px-2 py-0.5`}>
-              {difficultyLabels[question.difficulty]}
-            </Badge>
-            <Badge className={`${levelColors[question.level]} text-xs px-2 py-0.5`}>
-              {levelLabels[question.level]}
-            </Badge>
+    <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-primary/30 bg-card/50 backdrop-blur-sm group">
+      <CardContent className="p-3 sm:p-4">
+        <div className="space-y-2">
+          {/* Header: Title and Badges */}
+          <div className="flex justify-between items-start gap-2">
+            <h3 className="flex-1 text-sm sm:text-base font-medium leading-tight line-clamp-2">
+              <Link 
+                to={`/questions/${question.id}`}
+                className="hover:text-primary transition-colors group-hover:text-primary"
+              >
+                {question.title}
+              </Link>
+            </h3>
+            <div className="flex gap-1 flex-shrink-0">
+              <Badge variant="secondary" className={`${difficultyColors[question.difficulty]} text-xs px-1.5 py-0.5`}>
+                {difficultyLabels[question.difficulty]}
+              </Badge>
+              <Badge variant="secondary" className={`${levelColors[question.level]} text-xs px-1.5 py-0.5`}>
+                {levelLabels[question.level]}
+              </Badge>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed">
-            {question.content.substring(0, 150)}...
+          
+          {/* Content Preview */}
+          <p className="text-muted-foreground text-xs sm:text-sm line-clamp-2 leading-relaxed">
+            {question.content.substring(0, 120)}...
           </p>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 pt-3 border-t">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-              <div className="flex items-center gap-1">
+          
+          {/* Footer: Metadata and Action */}
+          <div className="flex items-center justify-between pt-2 border-t border-border/50">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground overflow-hidden">
+              <div className="flex items-center gap-1 flex-shrink-0">
                 <User className="h-3 w-3" />
-                <span className="font-medium">{question.profiles.display_name}</span>
+                <span className="font-medium truncate max-w-[80px]">{question.profiles.display_name}</span>
               </div>
               <span className="hidden sm:inline">•</span>
-              <span className="bg-muted px-2 py-0.5 rounded text-xs">{question.categories.name}</span>
-              <span className="hidden sm:inline">•</span>
-              <span className="text-xs">
+              <span className="bg-muted/70 px-1.5 py-0.5 rounded text-xs truncate max-w-[100px]">
+                {question.categories.name}
+              </span>
+              <span className="hidden lg:inline">•</span>
+              <span className="hidden lg:inline text-xs">
                 {formatDistanceToNow(new Date(question.created_at), { 
                   addSuffix: true, 
                   locale: vi 
                 })}
               </span>
             </div>
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              <Button asChild size="sm" variant="outline" className="text-xs h-8">
-                <Link to={`/questions/${question.id}`}>
-                  <Eye className="h-3 w-3 mr-1" />
-                  <span className="hidden sm:inline">Xem chi tiết</span>
-                  <span className="sm:hidden">Xem</span>
-                </Link>
-              </Button>
-            </div>
+            <Button asChild size="sm" variant="ghost" className="text-xs h-7 px-2 hover:bg-primary/10">
+              <Link to={`/questions/${question.id}`}>
+                <Eye className="h-3 w-3 mr-1" />
+                <span className="hidden sm:inline">Xem</span>
+              </Link>
+            </Button>
           </div>
         </div>
       </CardContent>
