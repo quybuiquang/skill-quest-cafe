@@ -92,24 +92,34 @@ export function OptimizedRichTextEditor({
     { icon: Redo, action: () => editor.chain().focus().redo().run(), disabled: !editor.can().redo(), label: 'Redo' },
   ];
 
-  const renderButton = (button: any, key: string) => (
-    <Button
-      key={key}
-      variant="ghost"
-      size="sm"
-      onClick={button.action}
-      disabled={button.disabled}
-      className={cn(
-        "h-8 w-8 p-0",
-        typeof button.active === 'string' 
-          ? editor.isActive(button.active) ? 'bg-muted' : ''
-          : editor.isActive(button.active.name, button.active.attrs) ? 'bg-muted' : ''
-      )}
-      title={button.label}
-    >
-      <button.icon className="h-4 w-4" />
-    </Button>
-  );
+  const renderButton = (button: any, key: string) => {
+    let isActive = false;
+    
+    if (button.active) {
+      if (typeof button.active === 'string') {
+        isActive = editor.isActive(button.active);
+      } else if (button.active.name) {
+        isActive = editor.isActive(button.active.name, button.active.attrs || {});
+      }
+    }
+
+    return (
+      <Button
+        key={key}
+        variant="ghost"
+        size="sm"
+        onClick={button.action}
+        disabled={button.disabled}
+        className={cn(
+          "h-8 w-8 p-0",
+          isActive ? 'bg-muted' : ''
+        )}
+        title={button.label}
+      >
+        <button.icon className="h-4 w-4" />
+      </Button>
+    );
+  };
 
   return (
     <div className={cn("border rounded-lg bg-background overflow-hidden", className)}>
