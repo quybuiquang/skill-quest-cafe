@@ -4,7 +4,7 @@ import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { RichTextEditor } from '@/components/RichTextEditor';
+import { OptimizedRichTextEditor } from '@/components/OptimizedRichTextEditor';
 import { QuickComment } from '@/components/QuickComment';
 import { ExpandableContent } from '@/components/ExpandableContent';
 import { useAuth } from '@/hooks/useAuth';
@@ -264,7 +264,7 @@ const QuestionDetail = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <RichTextEditor
+                  <OptimizedRichTextEditor
                     content={newSolution}
                     onChange={setNewSolution}
                     placeholder="Nhập lời giải của bạn... Hỗ trợ định dạng text, code block, danh sách..."

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { QuestionCard } from '@/components/QuestionCard';
 import { useQuestions } from '@/hooks/useQuestions';
@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Footer } from '@/components/Footer';
+import { Pagination } from '@/components/Pagination';
 
 const Questions = () => {
   const { questions, categories, loading } = useQuestions();
@@ -21,6 +22,8 @@ const Questions = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
 
   useEffect(() => {
     let filtered = questions;
@@ -45,7 +48,20 @@ const Questions = () => {
     }
 
     setFilteredQuestions(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [questions, debouncedSearchTerm, selectedCategory, selectedDifficulty, selectedLevel]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredQuestions.length / itemsPerPage);
+  const paginatedQuestions = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredQuestions.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredQuestions, currentPage, itemsPerPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   if (!user) {
     return (
@@ -137,6 +153,11 @@ const Questions = () => {
               <Badge variant="outline" className="text-sm">
                 {filteredQuestions.length} kết quả
               </Badge>
+              {totalPages > 1 && (
+                <Badge variant="secondary" className="text-sm">
+                  Trang {currentPage}/{totalPages}
+                </Badge>
+              )}
             </div>
           </div>
           
@@ -201,6 +222,7 @@ const Questions = () => {
                   setSelectedCategory('all');
                   setSelectedDifficulty('all');
                   setSelectedLevel('all');
+                  setCurrentPage(1);
                 }}
                 variant="outline"
                 size="sm" 
@@ -216,10 +238,28 @@ const Questions = () => {
 
         {/* Questions Grid */}
         <div className="space-y-3 sm:space-y-4">
-          {filteredQuestions.length > 0 ? (
-            filteredQuestions.map((question) => (
-              <QuestionCard key={question.id} question={question} />
-            ))
+          {paginatedQuestions.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                {paginatedQuestions.map((question) => (
+                  <QuestionCard key={question.id} question={question} />
+                ))}
+              </div>
+              
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="pt-6">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    totalItems={filteredQuestions.length}
+                    itemsPerPage={itemsPerPage}
+                    className="justify-center"
+                  />
+                </div>
+              )}
+            </>
           ) : (
             <Card className="text-center py-8 sm:py-12">
               <CardContent>

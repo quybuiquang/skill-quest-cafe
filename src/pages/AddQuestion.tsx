@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useDraftSave } from '@/hooks/useDraftSave';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RichTextEditor } from '@/components/RichTextEditor';
+import { OptimizedRichTextEditor } from '@/components/OptimizedRichTextEditor';
 import { FormProgress } from '@/components/FormProgress';
 import { AutoSaveIndicator } from '@/components/AutoSaveIndicator';
 import { Label } from '@/components/ui/label';
@@ -237,7 +237,7 @@ const AddQuestion = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="content">Nội dung câu hỏi *</Label>
-                      <RichTextEditor
+                      <OptimizedRichTextEditor
                         content={content}
                         onChange={setContent}
                         placeholder="Mô tả chi tiết câu hỏi:&#10;- Bối cảnh và yêu cầu&#10;- Ví dụ code (nếu có)&#10;- Mức độ chi tiết mong muốn"

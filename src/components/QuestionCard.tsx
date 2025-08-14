@@ -36,10 +36,12 @@ const levelLabels = {
 };
 
 export function QuestionCard({ question }: QuestionCardProps) {
+  const cleanText = question.content.replace(/<[^>]*>/g, '');
+  
   return (
-    <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-primary/30 bg-card/50 backdrop-blur-sm group">
-      <CardContent className="p-3 sm:p-4">
-        <div className="space-y-2">
+    <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-primary/30 bg-card/50 backdrop-blur-sm group h-full flex flex-col">
+      <CardContent className="p-3 sm:p-4 flex-1 flex flex-col">
+        <div className="space-y-2 flex-1 flex flex-col">
           {/* Header: Title and Badges */}
           <div className="flex justify-between items-start gap-2">
             <h3 className="flex-1 text-sm sm:text-base font-medium leading-tight line-clamp-2">
@@ -61,12 +63,12 @@ export function QuestionCard({ question }: QuestionCardProps) {
           </div>
           
           {/* Content Preview */}
-          <p className="text-muted-foreground text-xs sm:text-sm line-clamp-2 leading-relaxed">
-            {question.content.substring(0, 120)}...
+          <p className="text-muted-foreground text-xs sm:text-sm line-clamp-2 leading-relaxed flex-1">
+            {cleanText.length > 120 ? `${cleanText.substring(0, 120)}...` : cleanText}
           </p>
           
           {/* Footer: Metadata and Action */}
-          <div className="flex items-center justify-between pt-2 border-t border-border/50">
+          <div className="flex items-center justify-between pt-2 border-t border-border/50 mt-auto">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground overflow-hidden">
               <div className="flex items-center gap-1 flex-shrink-0">
                 <User className="h-3 w-3" />
