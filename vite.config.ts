@@ -9,6 +9,10 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+  },
   plugins: [
     react(),
     mode === 'development' &&

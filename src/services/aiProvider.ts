@@ -1,228 +1,259 @@
-export interface AIQuestion {
-  question: string;
-  solution: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  level: 'fresher' | 'junior' | 'senior';
-  topic: string;
-}
-
-export interface AIProviderConfig {
-  provider: 'openai' | 'gemini';
-  openaiApiKey?: string;
-  geminiApiKey?: string;
-}
+import { supabase } from '@/integrations/supabase/client';
+import { 
+  GeneratedQuestion, 
+  GenerateRequest, 
+  QuestionsSchema,
+  AIParseError,
+  AIProviderError,
+  AIRateLimitError 
+} from '@/lib/schemas';
 
 export interface GenerateQuestionsParams {
   topic: string;
   difficulty: 'easy' | 'medium' | 'hard';
   level: 'fresher' | 'junior' | 'senior';
   count: number;
+  provider?: 'openai' | 'gemini';
+}
+
+export interface GenerateQuestionsResponse {
+  questions: GeneratedQuestion[];
+  metadata: {
+    provider: string;
+    fallbackUsed: boolean;
+    duration: number;
+  };
 }
 
 export class AIProviderService {
-  private config: AIProviderConfig;
+  private static readonly CACHE_DURATION = 3600000; // 1 hour
+  private static readonly MAX_RETRIES = 3;
+  private static readonly BASE_DELAY = 1000;
 
-  constructor(config: AIProviderConfig) {
-    this.config = config;
-  }
-
-  async generateQuestions(params: GenerateQuestionsParams): Promise<AIQuestion[]> {
-    const cacheKey = `ai_questions_${JSON.stringify(params)}`;
-    
+  /**
+   * Generate questions using AI via Supabase Edge Function
+   */
+  static async generateQuestions(params: GenerateQuestionsParams): Promise<GenerateQuestionsResponse> {
     // Check cache first
+    const cacheKey = this.getCacheKey(params);
     const cached = this.getFromCache(cacheKey);
     if (cached) {
       return cached;
     }
 
-    let questions: AIQuestion[];
-    
-    if (this.config.provider === 'openai') {
-      questions = await this.generateWithOpenAI(params);
-    } else {
-      questions = await this.generateWithGemini(params);
+    try {
+      const response = await this.callEdgeFunction(params);
+      
+      // Validate and parse response
+      const result = this.parseAndValidateResponse(response);
+      
+      // Cache successful results
+      this.saveToCache(cacheKey, result);
+      
+      return result;
+    } catch (error) {
+      console.error('AI generation failed:', error);
+      throw this.normalizeError(error);
     }
-
-    // Cache the results
-    this.saveToCache(cacheKey, questions);
-    
-    return questions;
   }
 
-  private async generateWithOpenAI(params: GenerateQuestionsParams): Promise<AIQuestion[]> {
-    if (!this.config.openaiApiKey) {
-      throw new Error('OpenAI API key is required');
-    }
-
-    const prompt = this.buildPrompt(params);
-
+  /**
+   * Test AI provider connectivity
+   */
+  static async testProvider(provider: 'openai' | 'gemini'): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.config.openaiApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { 
-              role: 'system', 
-              content: 'You are an expert technical interviewer who creates high-quality interview questions and detailed solutions. Always respond with valid JSON only.'
-            },
-            { role: 'user', content: prompt }
-          ],
-          max_tokens: 4000,
-          temperature: 0.7,
-        }),
+      const testParams: GenerateQuestionsParams = {
+        topic: 'JavaScript',
+        difficulty: 'easy',
+        level: 'junior',
+        count: 1,
+        provider
+      };
+
+      await this.callEdgeFunction(testParams);
+      return { 
+        success: true, 
+        message: `${provider === 'openai' ? 'OpenAI' : 'Gemini'} connection successful` 
+      };
+    } catch (error: any) {
+      return { 
+        success: false, 
+        message: error.message || `Failed to connect to ${provider}` 
+      };
+    }
+  }
+
+  /**
+   * Call the Supabase Edge Function with retry logic
+   */
+  private static async callEdgeFunction(params: GenerateQuestionsParams): Promise<any> {
+    return this.withRetry(async () => {
+      const { data, error } = await supabase.functions.invoke('generate-questions', {
+        body: params
       });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Invalid OpenAI API key');
-        } else if (response.status === 429) {
-          throw new Error('Rate limit exceeded. Please try again later.');
-        } else {
-          throw new Error(`OpenAI API error: ${response.status}`);
-        }
+      if (error) {
+        throw new AIProviderError(error.message, params.provider);
       }
 
-      const data = await response.json();
-      const content = data.choices[0].message.content;
-      
-      return this.parseAIResponse(content, params);
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
+      if (data.error) {
+        if (data.error.includes('rate limit')) {
+          throw new AIRateLimitError(data.error, params.provider);
+        }
+        throw new AIProviderError(data.error, params.provider);
       }
-      throw new Error('Failed to generate questions with OpenAI');
-    }
+
+      return data;
+    });
   }
 
-  private async generateWithGemini(params: GenerateQuestionsParams): Promise<AIQuestion[]> {
-    if (!this.config.geminiApiKey) {
-      throw new Error('Gemini API key is required');
-    }
-
-    const prompt = this.buildPrompt(params);
-
+  /**
+   * Parse and validate AI response using Zod
+   */
+  private static parseAndValidateResponse(response: any): GenerateQuestionsResponse {
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${this.config.geminiApiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 4000,
+      // If response has questions directly, validate it
+      if (response.questions) {
+        const validated = QuestionsSchema.parse(response);
+        return {
+          questions: validated.questions,
+          metadata: response.metadata || {
+            provider: 'unknown',
+            fallbackUsed: false,
+            duration: 0
           }
-        }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 400) {
-          throw new Error('Invalid Gemini API key');
-        } else if (response.status === 429) {
-          throw new Error('Rate limit exceeded. Please try again later.');
-        } else {
-          throw new Error(`Gemini API error: ${response.status}`);
-        }
+        };
       }
 
-      const data = await response.json();
-      const content = data.candidates[0].content.parts[0].text;
-      
-      return this.parseAIResponse(content, params);
+      // If response is the questions array directly
+      if (Array.isArray(response)) {
+        const validated = QuestionsSchema.parse({ questions: response });
+        return {
+          questions: validated.questions,
+          metadata: {
+            provider: 'unknown',
+            fallbackUsed: false,
+            duration: 0
+          }
+        };
+      }
+
+      throw new AIParseError('Response does not contain questions array');
     } catch (error) {
       if (error instanceof Error) {
-        throw error;
+        throw new AIParseError(
+          `Failed to parse AI response: ${error.message}`,
+          JSON.stringify(response).substring(0, 500)
+        );
       }
-      throw new Error('Failed to generate questions with Gemini');
+      throw new AIParseError('Unknown parsing error');
     }
   }
 
-  private buildPrompt(params: GenerateQuestionsParams): string {
-    return `Generate ${params.count} interview questions for ${params.topic} with ${params.difficulty} difficulty for ${params.level} level developers.
-
-Format the response as a JSON array of objects with the following structure:
-{
-  "question": "The interview question text",
-  "solution": "Clear and detailed explanation/solution in HTML format",
-  "difficulty": "${params.difficulty}",
-  "level": "${params.level}",
-  "topic": "${params.topic}"
-}
-
-Requirements:
-- Questions should be relevant for ${params.level} developers
-- Difficulty should match ${params.difficulty} level
-- Solutions should include code examples where applicable using <pre><code> tags
-- Use proper HTML formatting for solutions (p, pre, code, strong, em tags)
-- Questions should be practical and commonly asked in interviews
-- Ensure variety in question types (conceptual, practical, coding)
-- Make solutions comprehensive but concise
-
-Return only the JSON array, no additional text.`;
-  }
-
-  private parseAIResponse(content: string, params: GenerateQuestionsParams): AIQuestion[] {
-    try {
-      // Clean the content to extract JSON
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) {
-        throw new Error('No valid JSON found in response');
+  /**
+   * Retry function with exponential backoff
+   */
+  private static async withRetry<T>(
+    fn: () => Promise<T>, 
+    retries = this.MAX_RETRIES, 
+    baseDelayMs = this.BASE_DELAY
+  ): Promise<T> {
+    let lastError: any;
+    
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await fn();
+      } catch (error: any) {
+        lastError = error;
+        
+        const errorMsg = `${error?.message || ""}`.toLowerCase();
+        const isRateLimit = errorMsg.includes("rate limit") || errorMsg.includes("429");
+        const isServerError = errorMsg.includes("5") || error?.status >= 500;
+        
+        // Only retry on rate limits or server errors
+        if (i < retries - 1 && (isRateLimit || isServerError)) {
+          const delay = baseDelayMs * Math.pow(2, i);
+          console.log(`Retrying in ${delay}ms (attempt ${i + 1}/${retries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        break;
       }
-
-      const questions = JSON.parse(jsonMatch[0]);
-      
-      if (!Array.isArray(questions)) {
-        throw new Error('Response is not an array');
-      }
-
-      return questions.map((q: any, index: number) => ({
-        question: q.question || `Generated question ${index + 1}`,
-        solution: q.solution || 'Solution not provided',
-        difficulty: q.difficulty || params.difficulty,
-        level: q.level || params.level,
-        topic: q.topic || params.topic
-      }));
-    } catch (error) {
-      console.error('Failed to parse AI response:', error);
-      throw new Error('Failed to parse AI response. Please try again.');
     }
+    
+    throw lastError;
   }
 
-  private getFromCache(key: string): AIQuestion[] | null {
+  /**
+   * Generate cache key for request
+   */
+  private static getCacheKey(params: GenerateQuestionsParams): string {
+    const key = `ai_questions_${params.topic}_${params.difficulty}_${params.level}_${params.count}_${params.provider || 'auto'}`;
+    return key.replace(/[^a-zA-Z0-9_]/g, '_');
+  }
+
+  /**
+   * Get cached result if still valid
+   */
+  private static getFromCache(key: string): GenerateQuestionsResponse | null {
     try {
       const cached = localStorage.getItem(key);
       if (cached) {
         const data = JSON.parse(cached);
-        // Cache for 1 hour
-        if (Date.now() - data.timestamp < 3600000) {
-          return data.questions;
+        if (Date.now() - data.timestamp < this.CACHE_DURATION) {
+          return data.result;
         }
         localStorage.removeItem(key);
       }
     } catch (error) {
       console.error('Error reading from cache:', error);
+      localStorage.removeItem(key);
     }
     return null;
   }
 
-  private saveToCache(key: string, questions: AIQuestion[]): void {
+  /**
+   * Save result to cache
+   */
+  private static saveToCache(key: string, result: GenerateQuestionsResponse): void {
     try {
-      localStorage.setItem(key, JSON.stringify({
-        questions,
+      const cacheData = {
+        result,
         timestamp: Date.now()
-      }));
+      };
+      localStorage.setItem(key, JSON.stringify(cacheData));
     } catch (error) {
       console.error('Error saving to cache:', error);
+      // Don't fail if caching fails
     }
   }
+
+  /**
+   * Normalize different error types
+   */
+  private static normalizeError(error: any): Error {
+    if (error instanceof AIParseError || error instanceof AIProviderError || error instanceof AIRateLimitError) {
+      return error;
+    }
+
+    const message = error?.message || 'Unknown error occurred';
+    
+    if (message.includes('rate limit') || message.includes('429')) {
+      return new AIRateLimitError(message);
+    }
+    
+    if (message.includes('parse') || message.includes('JSON')) {
+      return new AIParseError(message);
+    }
+    
+    return new AIProviderError(message);
+  }
+}
+
+// Legacy exports for backward compatibility
+export interface AIQuestion extends GeneratedQuestion {}
+export interface AIProviderConfig {
+  provider: 'openai' | 'gemini';
+  openaiApiKey?: string;
+  geminiApiKey?: string;
 }

@@ -224,4 +224,44 @@ All colors MUST be HSL.
     transform: translateY(-2px);
     box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.1);
   }
+
+  /* Collapsible animations */
+  .collapsible-content {
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+  }
+
+  .collapsible-content[data-state="closed"] {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  .collapsible-content[data-state="open"] {
+    max-height: 1000px;
+    opacity: 1;
+  }
+
+  /* Loading states */
+  .loading-skeleton {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+  }
+
+  @keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 640px) {
+    .ai-question-card {
+      transform: none;
+    }
+    
+    .ai-question-card:hover {
+      transform: none;
+      box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.1);
+    }
+  } }
 }

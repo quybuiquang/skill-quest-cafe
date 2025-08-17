@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,8 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useAISettings } from '@/hooks/useAISettings';
 import { useToast } from '@/hooks/use-toast';
+import { AIProviderService } from '@/services/aiProvider';
 import { 
   Settings, 
   Key, 
@@ -19,42 +21,58 @@ import {
   AlertTriangle,
   Sparkles,
   Brain,
-  Zap
+  Zap,
+  ExternalLink,
+  TestTube,
+  Shield,
+  Server
 } from 'lucide-react';
 
 export function AISettingsForm() {
-  const { settings, saveSettings, clearSettings, isConfigured } = useAISettings();
+  const { 
+    serverSettings, 
+    clientSettings, 
+    saveServerSettings, 
+    saveClientSettings, 
+    clearClientSettings,
+    loading 
+  } = useAISettings();
   const { toast } = useToast();
   
-  const [provider, setProvider] = useState(settings.provider);
-  const [openaiApiKey, setOpenaiApiKey] = useState(settings.openaiApiKey);
-  const [geminiApiKey, setGeminiApiKey] = useState(settings.geminiApiKey);
+  const [defaultProvider, setDefaultProvider] = useState<'openai' | 'gemini'>('openai');
+  const [openaiApiKey, setOpenaiApiKey] = useState('');
+  const [geminiApiKey, setGeminiApiKey] = useState('');
   const [showOpenAIKey, setShowOpenAIKey] = useState(false);
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState<{ provider: string; testing: boolean }>({ provider: '', testing: false });
 
-  const handleSave = async () => {
+  useEffect(() => {
+    if (serverSettings) {
+      setDefaultProvider(serverSettings.default_provider);
+    }
+    if (clientSettings) {
+      setOpenaiApiKey(clientSettings.openaiApiKey);
+      setGeminiApiKey(clientSettings.geminiApiKey);
+    }
+  }, [serverSettings, clientSettings]);
+
+  const handleSaveServerSettings = async () => {
     setSaving(true);
     
     try {
-      const success = saveSettings({
-        provider,
-        openaiApiKey: openaiApiKey.trim(),
-        geminiApiKey: geminiApiKey.trim()
+      await saveServerSettings({
+        default_provider: defaultProvider
       });
 
-      if (success) {
-        toast({
-          title: 'Thành công',
-          description: 'Đã lưu cài đặt AI!'
-        });
-      } else {
-        throw new Error('Failed to save settings');
-      }
+      toast({
+        title: 'Thành công',
+        description: 'Đã lưu cài đặt server!'
+      });
     } catch (error) {
       toast({
         title: 'Lỗi',
-        description: 'Không thể lưu cài đặt. Vui lòng thử lại.',
+        description: 'Không thể lưu cài đặt server. Vui lòng thử lại.',
         variant: 'destructive'
       });
     } finally {
@@ -62,188 +80,315 @@ export function AISettingsForm() {
     }
   };
 
-  const handleClear = () => {
-    if (confirm('Bạn có chắc chắn muốn xóa tất cả cài đặt AI?')) {
-      clearSettings();
-      setProvider('openai');
+  const handleSaveClientSettings = async () => {
+    setSaving(true);
+    
+    try {
+      const success = saveClientSettings({
+        openaiApiKey: openaiApiKey.trim(),
+        geminiApiKey: geminiApiKey.trim()
+      });
+
+      if (success) {
+        toast({
+          title: 'Thành công',
+          description: 'Đã lưu API keys!'
+        });
+      } else {
+        throw new Error('Failed to save settings');
+      }
+    } catch (error) {
+      toast({
+        title: 'Lỗi',
+        description: 'Không thể lưu API keys. Vui lòng thử lại.',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClearClientSettings = () => {
+    if (confirm('Bạn có chắc chắn muốn xóa tất cả API keys?')) {
+      clearClientSettings();
       setOpenaiApiKey('');
       setGeminiApiKey('');
       toast({
         title: 'Thành công',
-        description: 'Đã xóa tất cả cài đặt AI!'
+        description: 'Đã xóa tất cả API keys!'
       });
     }
   };
 
-  const getProviderStatus = () => {
-    if (provider === 'openai' && openaiApiKey) {
-      return { configured: true, label: 'OpenAI đã cấu hình' };
-    } else if (provider === 'gemini' && geminiApiKey) {
-      return { configured: true, label: 'Gemini đã cấu hình' };
+  const handleTestProvider = async (provider: 'openai' | 'gemini') => {
+    setTesting({ provider, testing: true });
+    
+    try {
+      const result = await AIProviderService.testProvider(provider);
+      
+      if (result.success) {
+        toast({
+          title: 'Kết nối thành công',
+          description: result.message
+        });
+      } else {
+        toast({
+          title: 'Kết nối thất bại',
+          description: result.message,
+          variant: 'destructive'
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Lỗi kết nối',
+        description: error.message || 'Không thể kiểm tra kết nối',
+        variant: 'destructive'
+      });
+    } finally {
+      setTesting({ provider: '', testing: false });
     }
-    return { configured: false, label: 'Chưa cấu hình' };
   };
 
-  const status = getProviderStatus();
+  const getProviderStatus = (provider: 'openai' | 'gemini') => {
+    const hasKey = provider === 'openai' ? !!openaiApiKey : !!geminiApiKey;
+    return {
+      configured: hasKey,
+      label: hasKey ? `${provider === 'openai' ? 'OpenAI' : 'Gemini'} đã cấu hình` : 'Chưa cấu hình'
+    };
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Server Settings (Admin Only) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Server className="h-5 w-5 text-primary" />
+            Cài đặt Server (Admin)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Provider mặc định</Label>
+            <Select value={defaultProvider} onValueChange={(value: 'openai' | 'gemini') => setDefaultProvider(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="openai">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-green-500" />
+                    OpenAI GPT-4o Mini
+                  </div>
+                </SelectItem>
+                <SelectItem value="gemini">
+                  <div className="flex items-center gap-2">
+                    <Brain className="h-4 w-4 text-blue-500" />
+                    Google Gemini 1.5 Flash
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Alert>
+            <Shield className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Bảo mật:</strong> API keys được lưu trữ an toàn trong Supabase Secrets, không lưu trên client.
+              <a 
+                href="https://supabase.com/docs/guides/functions/secrets" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline ml-2 inline-flex items-center gap-1"
+              >
+                Hướng dẫn cấu hình
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </AlertDescription>
+          </Alert>
+
+          <Button onClick={handleSaveServerSettings} disabled={saving}>
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Đang lưu...' : 'Lưu cài đặt server'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Client Settings */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5 text-primary" />
-            Cài đặt AI Provider
+            API Keys (Client)
+            <div className="flex items-center gap-2 ml-auto">
+              {['openai', 'gemini'].map((provider) => {
+                const status = getProviderStatus(provider as 'openai' | 'gemini');
+                return (
+                  <Badge key={provider} variant={status.configured ? 'default' : 'secondary'}>
+                    {status.configured ? (
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                    ) : (
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                    )}
+                    {provider === 'openai' ? 'OpenAI' : 'Gemini'}
+                  </Badge>
+                );
+              })}
+            </div>
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <Badge variant={status.configured ? 'default' : 'secondary'}>
-              {status.configured ? (
-                <CheckCircle className="h-3 w-3 mr-1" />
-              ) : (
-                <AlertTriangle className="h-3 w-3 mr-1" />
-              )}
-              {status.label}
-            </Badge>
-          </div>
-        </CardHeader>
+        </CardContent>
         <CardContent className="space-y-6">
-          {/* Provider Selection */}
-          <div className="space-y-3">
-            <Label>Chọn AI Provider mặc định</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Card 
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  provider === 'openai' ? 'ring-2 ring-primary bg-primary/5' : 'hover:bg-muted/50'
-                }`}
-                onClick={() => setProvider('openai')}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                      <Sparkles className="h-5 w-5 text-green-600" />
+          {/* Provider Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* OpenAI Card */}
+            <Card className="border-green-200 dark:border-green-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-green-600" />
+                  OpenAI
+                  {getProviderStatus('openai').configured && (
+                    <Badge variant="outline" className="text-xs">Sẵn sàng</Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="openai-key" className="flex items-center gap-2">
+                    <Key className="h-4 w-4" />
+                    API Key
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="openai-key"
+                      type={showOpenAIKey ? 'text' : 'password'}
+                      value={openaiApiKey}
+                      onChange={(e) => setOpenaiApiKey(e.target.value)}
+                      placeholder="sk-..."
+                      className="pr-20"
+                    />
+                    <div className="absolute right-1 top-1 flex gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => setShowOpenAIKey(!showOpenAIKey)}
+                      >
+                        {showOpenAIKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleTestProvider('openai')}
+                        disabled={!openaiApiKey || testing.testing}
+                      >
+                        {testing.provider === 'openai' && testing.testing ? (
+                          <LoadingSpinner size="sm" />
+                        ) : (
+                          <TestTube className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
-                    <div>
-                      <h3 className="font-semibold">OpenAI</h3>
-                      <p className="text-xs text-muted-foreground">GPT-4o Mini</p>
-                    </div>
-                    {provider === 'openai' && (
-                      <CheckCircle className="h-5 w-5 text-primary ml-auto" />
-                    )}
                   </div>
-                </CardContent>
-              </Card>
+                  <p className="text-xs text-muted-foreground">
+                    Lấy API key từ <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">OpenAI Platform</a>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
-              <Card 
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  provider === 'gemini' ? 'ring-2 ring-primary bg-primary/5' : 'hover:bg-muted/50'
-                }`}
-                onClick={() => setProvider('gemini')}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <Brain className="h-5 w-5 text-blue-600" />
+            {/* Gemini Card */}
+            <Card className="border-blue-200 dark:border-blue-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Brain className="h-5 w-5 text-blue-600" />
+                  Google Gemini
+                  {getProviderStatus('gemini').configured && (
+                    <Badge variant="outline" className="text-xs">Sẵn sàng</Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="gemini-key" className="flex items-center gap-2">
+                    <Key className="h-4 w-4" />
+                    API Key
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="gemini-key"
+                      type={showGeminiKey ? 'text' : 'password'}
+                      value={geminiApiKey}
+                      onChange={(e) => setGeminiApiKey(e.target.value)}
+                      placeholder="AI..."
+                      className="pr-20"
+                    />
+                    <div className="absolute right-1 top-1 flex gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => setShowGeminiKey(!showGeminiKey)}
+                      >
+                        {showGeminiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleTestProvider('gemini')}
+                        disabled={!geminiApiKey || testing.testing}
+                      >
+                        {testing.provider === 'gemini' && testing.testing ? (
+                          <LoadingSpinner size="sm" />
+                        ) : (
+                          <TestTube className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
-                    <div>
-                      <h3 className="font-semibold">Google Gemini</h3>
-                      <p className="text-xs text-muted-foreground">Gemini 1.5 Flash</p>
-                    </div>
-                    {provider === 'gemini' && (
-                      <CheckCircle className="h-5 w-5 text-primary ml-auto" />
-                    )}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* API Keys */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="openai-key" className="flex items-center gap-2">
-                <Key className="h-4 w-4" />
-                OpenAI API Key
-                {provider === 'openai' && (
-                  <Badge variant="outline" className="text-xs">Đang sử dụng</Badge>
-                )}
-              </Label>
-              <div className="relative">
-                <Input
-                  id="openai-key"
-                  type={showOpenAIKey ? 'text' : 'password'}
-                  value={openaiApiKey}
-                  onChange={(e) => setOpenaiApiKey(e.target.value)}
-                  placeholder="sk-..."
-                  className="pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowOpenAIKey(!showOpenAIKey)}
-                >
-                  {showOpenAIKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Lấy API key từ <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">OpenAI Platform</a>
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="gemini-key" className="flex items-center gap-2">
-                <Key className="h-4 w-4" />
-                Gemini API Key
-                {provider === 'gemini' && (
-                  <Badge variant="outline" className="text-xs">Đang sử dụng</Badge>
-                )}
-              </Label>
-              <div className="relative">
-                <Input
-                  id="gemini-key"
-                  type={showGeminiKey ? 'text' : 'password'}
-                  value={geminiApiKey}
-                  onChange={(e) => setGeminiApiKey(e.target.value)}
-                  placeholder="AI..."
-                  className="pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowGeminiKey(!showGeminiKey)}
-                >
-                  {showGeminiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Lấy API key từ <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google AI Studio</a>
-              </p>
-            </div>
+                  <p className="text-xs text-muted-foreground">
+                    Lấy API key từ <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google AI Studio</a>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Security Notice */}
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription className="text-sm">
-              <strong>Bảo mật:</strong> API keys được lưu trữ cục bộ trong trình duyệt của bạn và không được gửi đến server của chúng tôi.
+              <strong>Bảo mật:</strong> API keys được lưu trữ cục bộ trong trình duyệt của bạn và chỉ được gửi đến Supabase Edge Functions. 
+              Không bao giờ được chia sẻ với bên thứ ba.
             </AlertDescription>
           </Alert>
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
             <Button 
-              onClick={handleSave} 
+              onClick={handleSaveClientSettings} 
               disabled={saving}
               className="flex-1"
             >
               <Save className="h-4 w-4 mr-2" />
-              {saving ? 'Đang lưu...' : 'Lưu cài đặt'}
+              {saving ? 'Đang lưu...' : 'Lưu API Keys'}
             </Button>
             <Button 
               variant="outline" 
-              onClick={handleClear}
+              onClick={handleClearClientSettings}
               disabled={saving}
             >
               <Trash2 className="h-4 w-4 mr-2" />
@@ -288,6 +433,13 @@ export function AISettingsForm() {
               </ul>
             </div>
           </div>
+
+          <Alert>
+            <Lightbulb className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Fallback tự động:</strong> Nếu provider chính gặp lỗi rate limit, hệ thống sẽ tự động thử provider còn lại.
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
     </div>

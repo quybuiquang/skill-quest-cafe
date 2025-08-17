@@ -1,31 +1,57 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
 
 export interface AISettings {
+  id?: string;
+  default_provider: 'openai' | 'gemini';
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ClientAISettings {
   provider: 'openai' | 'gemini';
   openaiApiKey: string;
   geminiApiKey: string;
 }
 
-const DEFAULT_SETTINGS: AISettings = {
+const DEFAULT_CLIENT_SETTINGS: ClientAISettings = {
   provider: 'openai',
   openaiApiKey: '',
   geminiApiKey: ''
 };
 
 export function useAISettings() {
-  const [settings, setSettings] = useState<AISettings>(DEFAULT_SETTINGS);
+  const [serverSettings, setServerSettings] = useState<AISettings | null>(null);
+  const [clientSettings, setClientSettings] = useState<ClientAISettings>(DEFAULT_CLIENT_SETTINGS);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     loadSettings();
-  }, []);
+  }, [user]);
 
-  const loadSettings = () => {
+  const loadSettings = async () => {
     try {
+      // Load server settings (admin only)
+      if (user) {
+        const { data: serverData, error: serverError } = await supabase
+          .from('ai_settings')
+          .select('*')
+          .limit(1)
+          .single();
+
+        if (!serverError && serverData) {
+          setServerSettings(serverData);
+        }
+      }
+
+      // Load client settings from localStorage
       const saved = localStorage.getItem('ai_settings');
       if (saved) {
         const parsed = JSON.parse(saved);
-        setSettings({ ...DEFAULT_SETTINGS, ...parsed });
+        setClientSettings({ ...DEFAULT_CLIENT_SETTINGS, ...parsed });
       }
     } catch (error) {
       console.error('Error loading AI settings:', error);
@@ -34,42 +60,95 @@ export function useAISettings() {
     }
   };
 
-  const saveSettings = (newSettings: Partial<AISettings>) => {
+  const saveServerSettings = async (settings: Partial<AISettings>) => {
+    if (!user) throw new Error('User not authenticated');
+
     try {
-      const updated = { ...settings, ...newSettings };
-      setSettings(updated);
+      if (serverSettings?.id) {
+        // Update existing
+        const { error } = await supabase
+          .from('ai_settings')
+          .update(settings)
+          .eq('id', serverSettings.id);
+
+        if (error) throw error;
+      } else {
+        // Create new
+        const { error } = await supabase
+          .from('ai_settings')
+          .insert({
+            ...settings,
+            created_by: user.id
+          });
+
+        if (error) throw error;
+      }
+
+      await loadSettings();
+      return true;
+    } catch (error) {
+      console.error('Error saving server settings:', error);
+      throw error;
+    }
+  };
+
+  const saveClientSettings = (settings: Partial<ClientAISettings>) => {
+    try {
+      const updated = { ...clientSettings, ...settings };
+      setClientSettings(updated);
       localStorage.setItem('ai_settings', JSON.stringify(updated));
       return true;
     } catch (error) {
-      console.error('Error saving AI settings:', error);
+      console.error('Error saving client settings:', error);
       return false;
     }
   };
 
-  const clearSettings = () => {
+  const clearClientSettings = () => {
     try {
-      setSettings(DEFAULT_SETTINGS);
+      setClientSettings(DEFAULT_CLIENT_SETTINGS);
       localStorage.removeItem('ai_settings');
       return true;
     } catch (error) {
-      console.error('Error clearing AI settings:', error);
+      console.error('Error clearing client settings:', error);
       return false;
     }
   };
 
-  const isConfigured = () => {
-    if (settings.provider === 'openai') {
-      return !!settings.openaiApiKey;
+  const isClientConfigured = () => {
+    if (clientSettings.provider === 'openai') {
+      return !!clientSettings.openaiApiKey;
     } else {
-      return !!settings.geminiApiKey;
+      return !!clientSettings.geminiApiKey;
     }
   };
 
+  const getEffectiveProvider = (): 'openai' | 'gemini' => {
+    // Use server setting if available, otherwise client setting
+    return serverSettings?.default_provider || clientSettings.provider;
+  };
+
+  // Combined settings for backward compatibility
+  const settings = {
+    provider: getEffectiveProvider(),
+    openaiApiKey: clientSettings.openaiApiKey,
+    geminiApiKey: clientSettings.geminiApiKey
+  };
+
   return {
+    // Server settings (admin only)
+    serverSettings,
+    saveServerSettings,
+    
+    // Client settings (user level)
+    clientSettings,
+    saveClientSettings,
+    clearClientSettings,
+    
+    // Combined/computed
     settings,
     loading,
-    saveSettings,
-    clearSettings,
-    isConfigured
+    isConfigured: isClientConfigured,
+    getEffectiveProvider
   };
 }
