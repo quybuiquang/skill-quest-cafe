@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Link, useNavigate } from 'react-router-dom';
 import { LogOut, User, Plus, Settings, BookOpen, Home, Camera } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,6 +82,12 @@ export function Header() {
                   Thêm câu hỏi
                 </Link>
               </Button>
+              <Button asChild variant="ghost">
+                <Link to="/ai-generator">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  AI Generator
+                </Link>
+              </Button>
               
               <ThemeToggle />
               
@@ -106,6 +113,10 @@ export function Header() {
                   <DropdownMenuItem onClick={() => navigate('/profile')}>
                     <User className="h-4 w-4 mr-2" />
                     Hồ sơ cá nhân
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/settings')}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Cài đặt
                   </DropdownMenuItem>
                   {isAdmin && (
                     <DropdownMenuItem onClick={() => navigate('/admin')}>
@@ -133,7 +144,7 @@ export function Header() {
         {/* Mobile Navigation */}
         <div className="flex items-center space-x-2 md:hidden">
           <ThemeToggle />
-          <MobileNav />
+          <MobileNav isAdmin={isAdmin} />
         </div>
       </div>
     </header>

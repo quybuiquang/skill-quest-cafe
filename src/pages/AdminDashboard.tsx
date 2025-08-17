@@ -6,6 +6,7 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { MobileNav } from '@/components/ui/mobile-nav';
 import { AIQuestionGenerator } from '@/components/AIQuestionGenerator';
+import { AISettingsForm } from '@/components/AISettingsForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -339,6 +340,20 @@ export default function AdminDashboard() {
                       <p className="text-muted-foreground">Tạo câu hỏi interview tự động bằng AI</p>
                     </div>
                     <AIQuestionGenerator />
+                  </div>
+                </div>
+              } />
+              <Route path="ai-settings" element={
+                <div className="flex-1 p-4 md:p-6">
+                  <div className="max-w-4xl mx-auto">
+                    <div className="mb-6">
+                      <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+                        <Settings className="h-8 w-8 text-primary" />
+                        Cài đặt AI
+                      </h1>
+                      <p className="text-muted-foreground">Cấu hình AI providers cho hệ thống</p>
+                    </div>
+                    <AISettingsForm />
                   </div>
                 </div>
               } />

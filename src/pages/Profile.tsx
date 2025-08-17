@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AvatarUpload } from '@/components/ui/avatar-upload';
+import { AISettingsForm } from '@/components/AISettingsForm';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/hooks/use-toast';
@@ -30,7 +31,8 @@ import {
   Mail,
   Key,
   Activity,
-  Sparkles
+  Sparkles,
+  Brain
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -404,6 +406,19 @@ const Profile = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* AI Settings Section */}
+          <Card className="animate-fade-in">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-primary" />
+                Cài đặt AI
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AISettingsForm />
+            </CardContent>
+          </Card>
         </div>
       </div>
       <Footer />

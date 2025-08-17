@@ -11,7 +11,10 @@ import {
   Tag, 
   Sparkles, 
   Settings,
-  Menu
+  Menu,
+  Home,
+  Plus,
+  User
 } from 'lucide-react';
 
 const adminMenuItems = [
@@ -52,12 +55,44 @@ const adminMenuItems = [
   }
 ];
 
+const mainMenuItems = [
+  {
+    title: 'Trang chủ',
+    url: '/',
+    icon: Home
+  },
+  {
+    title: 'Thêm câu hỏi',
+    url: '/add-question',
+    icon: Plus
+  },
+  {
+    title: 'AI Generator',
+    url: '/ai-generator',
+    icon: Sparkles
+  },
+  {
+    title: 'Hồ sơ',
+    url: '/profile',
+    icon: User
+  },
+  {
+    title: 'Cài đặt',
+    url: '/settings',
+    icon: Settings
+  }
+];
+
 interface MobileNavProps {
   className?: string;
+  isAdmin?: boolean;
 }
 
-export function MobileNav({ className }: MobileNavProps) {
+export function MobileNav({ className, isAdmin = false }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  const menuItems = isAdmin ? adminMenuItems : mainMenuItems;
+  const title = isAdmin ? 'Quản trị' : 'Menu';
 
   return (
     <div className={cn("md:hidden", className)}>
@@ -70,11 +105,11 @@ export function MobileNav({ className }: MobileNavProps) {
         <SheetContent side="left" className="w-64 p-0">
           <div className="flex flex-col h-full">
             <div className="p-4 border-b">
-              <h2 className="font-semibold text-lg">Quản trị</h2>
+              <h2 className="font-semibold text-lg">{title}</h2>
             </div>
             <nav className="flex-1 p-4">
               <div className="space-y-2">
-                {adminMenuItems.map((item) => (
+                {menuItems.map((item) => (
                   <NavLink
                     key={item.title}
                     to={item.url}

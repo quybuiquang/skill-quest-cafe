@@ -48,6 +48,11 @@ const adminMenuItems = [
     icon: Sparkles
   },
   {
+    title: 'Cài đặt AI',
+    url: '/admin/ai-settings',
+    icon: Settings
+  },
+  {
     title: 'Người dùng',
     url: '/admin/users',
     icon: Users
@@ -57,11 +62,6 @@ const adminMenuItems = [
     url: '/admin/categories',
     icon: Tag
   },
-  {
-    title: 'API Key',
-    url: '/admin/api-key',
-    icon: Settings
-  }
 ];
 
 export function AdminSidebar() {

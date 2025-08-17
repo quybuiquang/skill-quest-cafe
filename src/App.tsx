@@ -11,6 +11,8 @@ import Profile from "./pages/Profile";
 import QuestionDetail from "./pages/QuestionDetail";
 import Admin from "./pages/Admin";
 import AdminDashboard from "./pages/AdminDashboard";
+import AIGenerator from "./pages/AIGenerator";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { ScrollToTop } from "./components/ui/scroll-to-top";
 
@@ -30,6 +32,8 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/add-question" element={<AddQuestion />} />
             <Route path="/questions/:id" element={<QuestionDetail />} />
+            <Route path="/ai-generator" element={<AIGenerator />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/*" element={<AdminDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
