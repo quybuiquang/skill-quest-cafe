@@ -214,4 +214,14 @@ All colors MUST be HSL.
     border: 1px solid hsl(var(--border)) !important;
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
   }
+
+  /* AI Generator specific styles */
+  .ai-question-card {
+    transition: all 0.2s ease-in-out;
+  }
+
+  .ai-question-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.1);
+  }
 }

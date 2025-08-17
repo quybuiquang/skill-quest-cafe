@@ -10,6 +10,7 @@ import AddQuestion from "./pages/AddQuestion";
 import Profile from "./pages/Profile";
 import QuestionDetail from "./pages/QuestionDetail";
 import Admin from "./pages/Admin";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import { ScrollToTop } from "./components/ui/scroll-to-top";
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/add-question" element={<AddQuestion />} />
             <Route path="/questions/:id" element={<QuestionDetail />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/admin/*" element={<AdminDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
